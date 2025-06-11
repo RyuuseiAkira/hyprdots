@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #|---/ /+--------------------------------------+---/ /|#
-#|--/ /-| Script to apply post install configs |--/ /|#
+#|--/ /-| Script to apply post install configs |--/ /-|#
 #|-/ /--| Prasanth Rangan                      |-/ /--|#
 #|/ /---+--------------------------------------+/ /---|#
 
@@ -50,6 +50,13 @@ fi
 if ! pkg_installed cargo; then
     echo -e "${RED}[ERROR]${NC} cargo is not installed. Cannot build mdrop. Please install rustup/cargo first."
 else
+    # Set default Rust toolchain to stable before building Rust projects
+    echo -e "${GREEN}[INFO]${NC} Setting Rust default toolchain to stable (via rustup)..."
+    rustup default stable
+    if [ $? -ne 0 ]; then
+        echo -e "${YELLOW}[WARN]${NC} Failed to set Rust default toolchain to stable. This might indicate 'rustup' is not installed or configured correctly. Continuing anyway, but build might fail if toolchain is incorrect."
+    fi
+
     echo -e "${GREEN}[INFO]${NC} Installing mdrop..."
     mdrop_dir="${scrDir}/mdrop" # Define a directory for cloning mdrop
 
@@ -100,9 +107,20 @@ fi # End of cargo check block for mdrop
 echo -e "${GREEN}[INFO]${NC} Installing msi-ec (kernel module)..."
 msi_ec_dir="${scrDir}/msi-ec" # Define a directory for cloning msi-ec
 
+# Dynamically determine kernel headers package
+KERNEL_NAME=$(uname -r)
+KERNEL_HEADERS_PKG="linux-headers" # Default for standard kernel
+
+if echo "$KERNEL_NAME" | grep -q -- "-zen"; then
+    KERNEL_HEADERS_PKG="linux-zen-headers"
+elif echo "$KERNEL_NAME" | grep -q -- "-lts"; then
+    KERNEL_HEADERS_PKG="linux-lts-headers"
+# Add more specific flavors if needed, e.g., elif echo "$KERNEL_NAME" | grep -q -- "-hardened"; then KERNEL_HEADERS_PKG="linux-hardened-headers"
+fi
+
 # Install prerequisites for kernel modules on Arch
-echo -e "${GREEN}[INFO]${NC} Installing prerequisites for msi-ec (base-devel, linux-headers)..."
-sudo pacman -S --noconfirm --needed base-devel linux-headers
+echo -e "${GREEN}[INFO]${NC} Installing prerequisites for msi-ec (base-devel, ${KERNEL_HEADERS_PKG})..."
+sudo pacman -S --noconfirm --needed base-devel "${KERNEL_HEADERS_PKG}"
 if [ $? -ne 0 ]; then
     echo -e "${RED}[ERROR]${NC} Failed to install msi-ec build prerequisites. Skipping msi-ec installation."
 else
@@ -142,6 +160,8 @@ else
 
             if [ $? -eq 0 ]; then
                 echo -e "${GREEN}[INFO]${NC} msi-ec kernel module installed successfully via DKMS."
+                # As per user request, skipping the explicit udev rule copy for msi-ec.
+                # If needed, the user should manually copy the udev rule as per msi-ec's README.
             else
                 echo -e "${RED}[ERROR]${NC} Failed to install msi-ec kernel module via DKMS. Check make output for details."
             fi
@@ -152,6 +172,9 @@ else
 fi # End of msi-ec installation attempts
 
 # ---
+
+## Reload Udev Rules (for mdrop and any other changes)
+# This step is done once after all relevant device-related udev rules are placed
 echo -e "${GREEN}[INFO]${NC} Reloading udev rules (for mdrop and other system changes)..."
 sudo udevadm control --reload-rules
 echo -e "${GREEN}[INFO]${NC} All relevant udev rules applied and reloaded."
