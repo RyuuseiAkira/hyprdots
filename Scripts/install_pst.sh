@@ -95,6 +95,9 @@ else
         else
             echo -e "${RED}[ERROR]${NC} Failed to build mdrop. Check cargo output for details."
         fi
+        # Clean up the mdrop repository after installation attempt
+        echo -e "${GREEN}[INFO]${NC} Cleaning up mdrop repository..."
+        rm -rf "${mdrop_dir}"
     else
         echo -e "${RED}[ERROR]${NC} Failed to clone mdrop repository."
     fi
@@ -165,11 +168,103 @@ else
             else
                 echo -e "${RED}[ERROR]${NC} Failed to install msi-ec kernel module via DKMS. Check make output for details."
             fi
+            # Clean up the msi-ec repository after installation attempt
+            echo -e "${GREEN}[INFO]${NC} Cleaning up msi-ec repository..."
+            rm -rf "${msi_ec_dir}"
         else
             echo -e "${RED}[ERROR]${NC} Failed to clone msi-ec repository."
         fi
     fi
 fi # End of msi-ec installation attempts
+
+# ---
+
+## Install custom package: agsv1
+
+echo -e "${GREEN}[INFO]${NC} Installing custom package: agsv1..."
+
+# Check if agsv1 is already installed
+if pkg_installed agsv1; then
+    echo -e "${YELLOW}[SKIP]${NC} agsv1 is already installed. Skipping custom package build."
+else
+    agsv1_build_dir="${scrDir}/agsv1-build" # Temporary directory for building agsv1
+    mkdir -p "${agsv1_build_dir}"
+
+    if [ ! -d "${agsv1_build_dir}" ]; then
+        echo -e "${RED}[ERROR]${NC} Failed to create directory ${agsv1_build_dir}. Cannot build agsv1."
+    else
+        echo -e "${GREEN}[INFO]${NC} Creating PKGBUILD for agsv1 in ${agsv1_build_dir}..."
+        cat <<EOF > "${agsv1_build_dir}/PKGBUILD"
+# Maintainer: kotontrion <kotontrion@tutanota.de>
+
+# This package is only intended to be used while migrating from ags v1.8.2 to ags v2.0.0.
+# Many ags configs are quite big and it takes a while to migrate, therefore I made this package
+# to install ags v1.8.2 as "agsv1", so both versions can be installed at the same time, making it
+# possible to migrate bit by bit while still having a working v1 config around.
+#
+# First update the aylurs-gtk-shell package to v2, then install this one.
+#
+# This package won't receive any updates anymore, so as soon as you migrated, uninstall this one.
+
+pkgname=agsv1
+_pkgname=ags
+pkgver=1.9.0
+pkgrel=1
+pkgdesc="Aylurs's Gtk Shell (AGS), An eww inspired gtk widget system."
+arch=('x86_64')
+url="https://github.com/Aylur/ags"
+license=('GPL-3.0-only')
+makedepends=('git' 'gobject-introspection' 'meson' 'glib2-devel' 'npm' 'typescript')
+depends=('gjs' 'glib2' 'glibc' 'gtk3' 'gtk-layer-shell' 'libpulse' 'pam')
+optdepends=('gnome-bluetooth-3.0: required for bluetooth service'
+            'greetd: required for greetd service'
+            'libdbusmenu-gtk3: required for systemtray service'
+            'libsoup3: required for the Utils.fetch feature'
+            'libnotify: required for sending notifications'
+            'networkmanager: required for network service'
+            'power-profiles-daemon: required for powerprofiles service'
+            'upower: required for battery service')
+backup=('etc/pam.d/ags')
+source=("\$pkgname-\$pkgver.tar.gz::https://github.com/Aylur/ags/archive/refs/tags/v\${pkgver}.tar.gz"
+        "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control")
+sha256sums=('962f99dcf202eef30e978d1daedc7cdf213e07a3b52413c1fb7b54abc7bd08e6'
+            SKIP)
+
+prepare() {
+    cd "\$srcdir/\$_pkgname-\$pkgver"
+    mv -T "\$srcdir"/libgnome-volume-control subprojects/gvc
+}
+
+build() {
+    cd "\$srcdir/\$_pkgname-\$pkgver"
+    npm install
+    arch-meson build --libdir "lib/\$_pkgname" -Dbuild_types=true
+    meson compile -C build
+}
+
+package() {
+    cd "\$srcdir/\$_pkgname-\$pkgver"
+    meson install -C build --destdir "\$pkgdir"
+    rm \${pkgdir}/usr/bin/ags
+    ln -sf /usr/share/com.github.Aylur.ags/com.github.Aylur.ags \${pkgdir}/usr/bin/agsv1
+}
+EOF
+        echo -e "${GREEN}[INFO]${NC} PKGBUILD created successfully."
+
+        echo -e "${GREEN}[INFO]${NC} Building and installing agsv1 using makepkg..."
+        (cd "${agsv1_build_dir}" && makepkg -si --noconfirm)
+
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}[INFO]${NC} agsv1 installed successfully."
+        else
+            echo -e "${RED}[ERROR]${NC} Failed to build and install agsv1. Check makepkg output for details."
+        fi
+
+        # Clean up the build directory
+        echo -e "${GREEN}[INFO]${NC} Cleaning up agsv1 build directory..."
+        rm -rf "${agsv1_build_dir}"
+    fi
+fi
 
 # ---
 
