@@ -15,6 +15,7 @@ fcitx5-gtk
 fcitx5-unikey
 vesktop-git
 rustup
+foot
 
 # --------------------------------------------------- // Dependencies
 xdg-desktop-portal-gtk                                 # xdg desktop portal using gtk
