@@ -221,7 +221,7 @@ else
             echo -e "${GREEN}[INFO]${NC} Running 'sudo downgrade typescript'. Please select version ${REQUIRED_TS_VER} and confirm adding to IgnorePkg."
             # The 'downgrade' command is interactive, requiring user input.
             # It will list versions and ask for selection and IgnorePkg confirmation.
-            sudo downgrade typescript
+            sudo downgrade typescript=5.1.6-1
             if [ $? -ne 0 ]; then
                 echo -e "${RED}[ERROR]${NC} 'downgrade typescript' failed or was cancelled. Aborting agsv1 installation."
                 rm -rf "${agsv1_build_dir}"
