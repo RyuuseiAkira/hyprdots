@@ -11,6 +11,34 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# chezmoi
+if ! pkg_installed chezmoi; then
+    echo -e "\033[0;33m[CHEZMOI]\033[0m chezmoi is not installed."
+    if pkg_installed yay; then
+        echo -e "\033[0;32m[CHEZMOI]\033[0m yay detected // attempting to install chezmoi..."
+        yay -S --noconfirm chezmoi
+        if [ $? -eq 0 ]; then
+            echo -e "\033[0;32m[CHEZMOI]\033[0m chezmoi installed successfully."
+        else
+            echo -e "\033[0;31m[ERROR]\033[0m Failed to install chezmoi with yay. Please install it manually."
+            echo -e "\033[0;33m[SKIP]\033[0m Skipping dotfile application."
+            chezmoi_installed=false # Set a flag to indicate installation failed
+        fi
+    else
+        echo -e "\033[0;31m[ERROR]\033[0m yay is not installed. Cannot automatically install chezmoi."
+        echo -e "\033[0;33m[SKIP]\033[0m Skipping dotfile application. Please install chezmoi and yay manually."
+        chezmoi_installed=false # Set a flag to indicate yay or chezmoi was not available
+    fi
+fi
+
+# Proceed with chezmoi if it's installed now
+if pkg_installed chezmoi; then
+    echo -e "\033[0;32m[CHEZMOI]\033[0m detected // initializing dotfiles..."
+    chezmoi init --apply https://github.com/RyuuseiAkira/dotfiles
+    echo -e "\033[0;32m[CHEZMOI]\033[0m dotfiles applied using chezmoi."
+fi
+
+
 # sddm
 if pkg_installed sddm; then
 
