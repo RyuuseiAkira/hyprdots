@@ -1,18 +1,29 @@
 # --------------------------------------------------- // System
-# downgrade                                            # downgrade packages
+downgrade                                            # downgrade packages
 # trash-cli-git                                        # cli to manage trash files
 # libinput-gestures                                    # actions touchpad gestures using libinput
 # gestures                                             # gui for libinput-gestures
+# msi-ec-dkms-git                                        # Driver for MSI laptop EC (DKMS)
+hyprshade
+chezmoi
+papirus-icon-theme
+satty
+power-profiles-daemon
+fcitx5
+fcitx5-configtool
+fcitx5-gtk
+fcitx5-unikey
+vesktop-git
 
 # --------------------------------------------------- // Dependencies
 xdg-desktop-portal-gtk                                 # xdg desktop portal using gtk
-# emote                                                # emoji picker gtk3
+emote                                                # emoji picker gtk3
 
 # --------------------------------------------------- // Gaming
 steam                                                  # gaming platform
 gamemode                                               # daemon and library for game optimisations
 mangohud                                               # system performance overlay
-# gamescope                                            # micro-compositor for gaming
+gamescope                                            # micro-compositor for gaming
 
 # --------------------------------------------------- // Music
 cava                                                   # audio visualizer
@@ -21,3 +32,4 @@ spicetify-cli                                          # cli to customize spotif
 
 # --------------------------------------------------- // Apps
 # neovim                                               # vim based text editor
+cava                                                   # text editor
