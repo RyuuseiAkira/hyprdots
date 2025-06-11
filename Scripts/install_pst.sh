@@ -193,6 +193,35 @@ else
     if [ ! -d "${agsv1_build_dir}" ]; then
         echo -e "${RED}[ERROR]${NC} Failed to create directory ${agsv1_build_dir}. Cannot build agsv1."
     else
+        # --- Specific TypeScript Version Handling ---
+        REQUIRED_TS_VER="5.1.6-1"
+        CURRENT_TS_VER=$(pacman -Q typescript 2>/dev/null | awk '{print $2}')
+
+        if [ "$CURRENT_TS_VER" != "$REQUIRED_TS_VER" ]; then
+            echo -e "${GREEN}[INFO]${NC} Ensuring typescript version ${REQUIRED_TS_VER} is installed for agsv1 build..."
+            if [ -n "$CURRENT_TS_VER" ]; then # If any version is installed
+                echo -e "${YELLOW}[WARN]${NC} Current typescript version is ${CURRENT_TS_VER}. Attempting to replace with ${REQUIRED_TS_VER}."
+                # Remove existing typescript to avoid conflicts, ignoring dependencies for now
+                # Redirect stderr to /dev/null to suppress "checking dependencies..." messages
+                sudo pacman -Rdd --noconfirm typescript &>/dev/null
+                if [ $? -ne 0 ]; then
+                    echo -e "${RED}[ERROR]${NC} Failed to remove existing typescript package. Cannot guarantee specific version for agsv1. Aborting agsv1 installation."
+                    rm -rf "${agsv1_build_dir}"
+                    exit 1 # Exit script if cannot prepare dependency
+                fi
+            fi
+            sudo pacman -S --noconfirm "typescript=${REQUIRED_TS_VER}"
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}[ERROR]${NC} Failed to install typescript=${REQUIRED_TS_VER}. Aborting agsv1 installation."
+                rm -rf "${agsv1_build_dir}"
+                exit 1 # Exit script if cannot prepare dependency
+            fi
+            echo -e "${GREEN}[INFO]${NC} typescript ${REQUIRED_TS_VER} installed."
+        else
+            echo -e "${GREEN}[INFO]${NC} Correct typescript version (${REQUIRED_TS_VER}) already installed."
+        fi
+        # --- End TypeScript Version Handling ---
+
         echo -e "${GREEN}[INFO]${NC} Creating PKGBUILD for agsv1 in ${agsv1_build_dir}..."
         cat <<EOF > "${agsv1_build_dir}/PKGBUILD"
 # Maintainer: kotontrion <kotontrion@tutanota.de>
@@ -264,6 +293,28 @@ EOF
         echo -e "${GREEN}[INFO]${NC} Cleaning up agsv1 build directory..."
         rm -rf "${agsv1_build_dir}"
     fi
+fi
+
+# --- Add typescript to pacman's IgnorePkg list ---
+echo -e "${GREEN}[INFO]${NC} Adding 'typescript' to pacman's IgnorePkg list to prevent unwanted upgrades..."
+PACMAN_CONF_PATH="/etc/pacman.conf"
+PKG_TO_IGNORE="typescript"
+
+# Check if IgnorePkg line exists and already contains typescript
+if grep -qE "^IgnorePkg =.*\\b${PKG_TO_IGNORE}\\b" "$PACMAN_CONF_PATH"; then
+    echo -e "${YELLOW}[WARN]${NC} 'typescript' is already in pacman's IgnorePkg list."
+elif grep -q "^#IgnorePkg =" "$PACMAN_CONF_PATH"; then
+    # IgnorePkg line is commented out, uncomment it and add typescript
+    sudo sed -i "s/^#IgnorePkg =.*/IgnorePkg = ${PKG_TO_IGNORE}/" "$PACMAN_CONF_PATH"
+    echo -e "${GREEN}[INFO]${NC} Uncommented and added 'typescript' to pacman's IgnorePkg list."
+elif grep -q "^IgnorePkg =" "$PACMAN_CONF_PATH"; then
+    # IgnorePkg line exists but doesn't contain typescript, append it
+    sudo sed -i "/^IgnorePkg =/ s/$/ ${PKG_TO_IGNORE}/" "$PACMAN_CONF_PATH"
+    echo -e "${GREEN}[INFO]${NC} Added 'typescript' to existing pacman's IgnorePkg list."
+else
+    # No IgnorePkg line found, add a new one under [options]
+    sudo sed -i "/^\[options\]/a IgnorePkg = ${PKG_TO_IGNORE}" "$PACMAN_CONF_PATH"
+    echo -e "${GREEN}[INFO]${NC} Added 'IgnorePkg = typescript' to pacman.conf."
 fi
 
 # ---
