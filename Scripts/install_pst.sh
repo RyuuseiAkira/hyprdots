@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #|---/ /+--------------------------------------+---/ /|#
-#|--/ /-| Script to apply post install configs |--/ /-|#
+#|--/ /-| Script to apply post install configs |--/ /|#
 #|-/ /--| Prasanth Rangan                      |-/ /--|#
 #|/ /---+--------------------------------------+/ /---|#
 
@@ -42,7 +42,7 @@ if pkg_installed chezmoi; then
     echo -e "${GREEN}[INFO]${NC} Dotfiles applied using chezmoi."
 fi
 
----
+# ---
 
 ## Install mdrop
 
@@ -72,19 +72,16 @@ else
                 echo -e "${GREEN}[INFO]${NC} mdrop moved to /usr/local/bin/."
 
                 echo -e "${GREEN}[INFO]${NC} Setting up udev rules for mdrop..."
-                udev_rules_file="/etc/udev/rules.d/99-mdrop.rules"
-                udev_rule='SUBSYSTEM=="usb", ATTRS{idVendor}=="2fc6", MODE="0666"'
+                udev_rules_file_mdrop="/etc/udev/rules.d/99-mdrop.rules"
+                udev_rule_mdrop='SUBSYSTEM=="usb", ATTRS{idVendor}=="2fc6", MODE="0666"'
 
-                if grep -q "${udev_rule}" "${udev_rules_file}" 2>/dev/null; then
+                if grep -q "${udev_rule_mdrop}" "${udev_rules_file_mdrop}" 2>/dev/null; then
                     echo -e "${YELLOW}[WARN]${NC} udev rule already exists for mdrop."
                 else
-                    echo "${udev_rule}" | sudo tee "${udev_rules_file}" > /dev/null
-                    echo -e "${GREEN}[INFO]${NC} udev rule added to ${udev_rules_file}."
+                    echo "${udev_rule_mdrop}" | sudo tee "${udev_rules_file_mdrop}" > /dev/null
+                    echo -e "${GREEN}[INFO]${NC} udev rule added to ${udev_rules_file_mdrop}."
                 fi
-
-                echo -e "${GREEN}[INFO]${NC} Reloading udev rules..."
-                sudo udevadm control --reload-rules
-                echo -e "${GREEN}[INFO]${NC} mdrop installation complete."
+                # Udev reload is done once after all relevant rules are set
             else
                 echo -e "${RED}[ERROR]${NC} Failed to move mdrop binary to /usr/local/bin/."
             fi
@@ -94,9 +91,72 @@ else
     else
         echo -e "${RED}[ERROR]${NC} Failed to clone mdrop repository."
     fi
-fi
+fi # End of cargo check block for mdrop
 
----
+# ---
+
+## Install msi-ec (Kernel Module)
+
+echo -e "${GREEN}[INFO]${NC} Installing msi-ec (kernel module)..."
+msi_ec_dir="${scrDir}/msi-ec" # Define a directory for cloning msi-ec
+
+# Install prerequisites for kernel modules on Arch
+echo -e "${GREEN}[INFO]${NC} Installing prerequisites for msi-ec (base-devel, linux-headers)..."
+sudo pacman -S --noconfirm --needed base-devel linux-headers
+if [ $? -ne 0 ]; then
+    echo -e "${RED}[ERROR]${NC} Failed to install msi-ec build prerequisites. Skipping msi-ec installation."
+else
+    # Check if dkms is installed, install if not
+    if ! pkg_installed dkms; then
+        echo -e "${YELLOW}[WARN]${NC} dkms is not installed. Attempting to install dkms with yay..."
+        if pkg_installed yay; then
+            yay -S --noconfirm dkms
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}[ERROR]${NC} Failed to install dkms with yay. Skipping msi-ec installation."
+                dkms_installed=false
+            else
+                echo -e "${GREEN}[INFO]${NC} dkms installed successfully."
+                dkms_installed=true
+            fi
+        else
+            echo -e "${RED}[ERROR]${NC} yay is not installed. Cannot automatically install dkms. Skipping msi-ec installation."
+            dkms_installed=false
+        fi
+    else
+        echo -e "${GREEN}[INFO]${NC} dkms detected."
+        dkms_installed=true
+    fi
+
+    if [ "$dkms_installed" = true ]; then
+        if [ -d "${msi_ec_dir}" ]; then
+            echo -e "${YELLOW}[WARN]${NC} msi-ec directory already exists, pulling latest changes..."
+            git -C "${msi_ec_dir}" pull
+        else
+            echo -e "${GREEN}[INFO]${NC} Cloning msi-ec repository..."
+            git clone https://github.com/BeardOverflow/msi-ec.git "${msi_ec_dir}"
+        fi
+
+        if [ -d "${msi_ec_dir}" ]; then
+            echo -e "${GREEN}[INFO]${NC} Building and installing msi-ec kernel module using DKMS..."
+            (cd "${msi_ec_dir}" && sudo make dkms-install)
+
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}[INFO]${NC} msi-ec kernel module installed successfully via DKMS."
+            else
+                echo -e "${RED}[ERROR]${NC} Failed to install msi-ec kernel module via DKMS. Check make output for details."
+            fi
+        else
+            echo -e "${RED}[ERROR]${NC} Failed to clone msi-ec repository."
+        fi
+    fi
+fi # End of msi-ec installation attempts
+
+# ---
+echo -e "${GREEN}[INFO]${NC} Reloading udev rules (for mdrop and other system changes)..."
+sudo udevadm control --reload-rules
+echo -e "${GREEN}[INFO]${NC} All relevant udev rules applied and reloaded."
+
+# ---
 
 ## SDDM Configuration
 
@@ -134,7 +194,7 @@ else
     echo -e "${YELLOW}[WARN]${NC} sddm is not installed."
 fi
 
----
+# ---
 
 ## Dolphin File Manager
 
@@ -149,14 +209,14 @@ else
     echo -e "${YELLOW}[WARN]${NC} dolphin is not installed."
 fi
 
----
+# ---
 
 ## Shell Configuration
 
 # shell
 "${scrDir}/restore_shl.sh"
 
----
+# ---
 
 ## Flatpak Applications
 
