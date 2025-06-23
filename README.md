@@ -14,8 +14,8 @@ To install, execute the following commands:
 ```shell
 pacman -S --needed git base-devel
 git clone --depth 1 https://github.com/RyuuseiAkira/hyprdots ~/HyDE
-cd ~/HyDE/Scripts custom_apps.lst
-./install.sh
+cd ~/HyDE/Scripts
+./install.sh custom_apps.lst
 ```
 
 </div>
