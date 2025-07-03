@@ -19,6 +19,7 @@ foot
 pyprland
 flatpak
 zen-browser-bin
+mission-center
 
 # --------------------------------------------------- // Dependencies
 xdg-desktop-portal-gtk                                 # xdg desktop portal using gtk
