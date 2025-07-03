@@ -20,6 +20,8 @@ pyprland
 flatpak
 zen-browser-bin
 mission-center
+hypridle
+hyprlock
 
 # --------------------------------------------------- // Dependencies
 xdg-desktop-portal-gtk                                 # xdg desktop portal using gtk
