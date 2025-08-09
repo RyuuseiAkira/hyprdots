@@ -42,7 +42,7 @@ if pkg_installed chezmoi; then
     echo -e "${GREEN}[INFO]${NC} Dotfiles applied using chezmoi."
 fi
 
-$HOME/.local/share/bin/ZenBash.sh
+# $HOME/.local/share/bin/ZenBash.sh
 
 # ---
 
